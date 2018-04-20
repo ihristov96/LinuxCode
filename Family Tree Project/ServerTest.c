@@ -6,6 +6,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include "Types.h"
 #define NUM_THREADS     5
 int server (void* client_socket_fd)
 {
