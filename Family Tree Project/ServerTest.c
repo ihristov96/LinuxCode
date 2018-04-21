@@ -6,18 +6,57 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
+
+
 #include "Types.h"
 #define NUM_THREADS     5
-int server (void* client_socket_fd)
+void showFamilyTree(int clientSocketFd)
+{
+	int size = 4;
+	printf("\nServer: showFamilyTree command accepted\n");
+	write (clientSocketFd, &size, sizeof (int));
+	
+}
+void addChildren(int clientSocketFd)
+{
+	printf("addChildren command accepted\n");
+}
+void killFamilyMember(int clientSocketFd)
+{
+	printf("killFamilyMember command accepted\n");
+}
+
+int clientHandlerThread (void* client_socket_fd)
 {
 	int client_socket = (int)client_socket_fd;
 	while (1) 
 	{
 		int length;
 		char* text;
+
+		int requestedCommand;
+
 		/* First, read the length of the text message from the socket. If
 		read returns zero, the client closed the connection. */
-		if (read (client_socket, &length, sizeof (length)) == 0)return 0;
+		// /if (read (client_socket, &length, sizeof (length)) == 0)return 0;
+
+		//first read command request from the client
+		if (read (client_socket, &requestedCommand, sizeof (requestedCommand)) == 0)return 0;
+
+		if( requestedCommand == showFamilyTree_c )
+		{
+			showFamilyTree(client_socket);
+		}
+		else if( requestedCommand == addChildren_c )
+		{
+			addChildren(client_socket);
+		}
+		else if( requestedCommand == killFamilyMember_c )
+		{
+			killFamilyMember(client_socket);
+		}
+
 		/* Allocate a buffer to hold the text.*/
 		text = (char*) malloc (length);
 		/* Read the text itself, and print it.
@@ -29,65 +68,83 @@ int server (void* client_socket_fd)
 		free (text);
 		/* If the client sent the message "quit," we're all done.*/
 		if (!strcmp (text, "quit"))
-		return 1;
+			break;
 	}
+	close (client_socket);
 	pthread_exit(NULL);
 }
 
+void signal_callback_handler(int signum)
+{
+   printf("Server shut down\n");
+   printf("TODO: Save binary tree into file\n");
+   exit(signum);
+}
+
+
 int main(int argc, char const *argv[])
 {
+	signal(SIGINT, signal_callback_handler);
+
 	pthread_t threads[NUM_THREADS];
-	int t = 0;
+	int clientCounter = 0;
 	int rc = 0;
 	const char* const socket_name = argv[1];
-	int socket_fd;
+	int sockfd;
 
-	struct sockaddr_un name;
+	struct sockaddr_un addr_serv;
 
-	int client_sent_quit_message;
 	//Create a socket
-	socket_fd = socket (PF_LOCAL, SOCK_STREAM, 0);
+	sockfd = socket (PF_LOCAL, SOCK_STREAM, 0);
 	
-	name.sun_family = AF_LOCAL;
-	//Copy socket name(path) to sun_path
-	strcpy (name.sun_path, socket_name);
-	
-	bind (socket_fd, &name, SUN_LEN (&name));
+	addr_serv.sun_family = AF_LOCAL;
+	//Copy socket addr_serv(path) to sun_path
+	strcpy (addr_serv.sun_path, socket_name);
+	unlink(addr_serv.sun_path); //premahvane na socket-a ako veche syshtestvuva
+
+	if( bind(sockfd, &addr_serv, SUN_LEN (&addr_serv)) == -1) //svyrzvane na gnezdoto
+	{
+		perror("bind");
+		exit(3);
+	}
 
 	//Listen for connections
-	listen (socket_fd, 5);
+	if( listen( sockfd, 5) == -1 ) // ochakvane na clienti
+	{
+		perror("listen");
+		exit(4);
+	}
 
 	/* Repeatedly accept connections, spinning off one server() to deal
 	with each client. Continue until a client sends a "quit"
 	message.
 	*/
-	do {
-
-		struct sockaddr_un client_name;
-		socklen_t client_name_len;
+	while(1)
+	{
+		struct sockaddr_un addr_clnt;
 		int client_socket_fd;
 		/* Accept a connection.
 		*/
-		client_socket_fd = accept (socket_fd, &client_name, &client_name_len);
+		client_socket_fd = accept (sockfd, &addr_clnt, SUN_LEN(&addr_clnt));
 		/* Handle the connection.
 		*/
-		rc = pthread_create(&threads[t], NULL, server, (void *)client_socket_fd);
+		rc = pthread_create(&threads[clientCounter], NULL, clientHandlerThread, (void *)client_socket_fd);
         if (rc)
         {
            printf("ERROR; return code from pthread_create() is %d\n", rc);
            exit(-1);
         }
-        t++;
+        clientCounter++;
 
 		//client_sent_quit_message = server (client_socket_fd);
 		/* Close our end of the connection.
 		*/
 		//close (client_socket_fd);
 	}
-	while (!client_sent_quit_message);
+
 	/* Remove the socket file.*/
-	close (socket_fd);
-	unlink (socket_name);
+	close (sockfd);
+	unlink (addr_serv.sun_path);
 
 
 	return 0;

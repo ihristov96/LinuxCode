@@ -18,3 +18,10 @@ typedef struct treeNode
 
 	bool isAlive;
 }node;
+
+typedef enum  
+{
+	showFamilyTree_c =1,
+	addChildren_c = 2,
+	killFamilyMember_c = 3
+}commandRequests;

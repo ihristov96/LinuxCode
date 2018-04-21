@@ -3,18 +3,54 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-/* Write TEXT to the socket given by file descriptor SOCKET_FD.
+
+#include "Types.h"
+/* Write command to the socket given by file descriptor SOCKET_FD.
 */
-void write_text (int socket_fd, const char* text)
+void sendCommandRequest (int server_socket_fd, int command)
 {
 	/* Write the number of bytes in the string, including
 	NUL-termination. */
-	int length = strlen (text) + 1;
-	write (socket_fd, &length, sizeof (length));
+	write (server_socket_fd, &command, sizeof (int));
 	/* Write the string. */
-	write (socket_fd, text, length);
+	//write (socket_fd, text, length);
 }
+void showFamilyTree(int server_socket_fd)
+{
+	int size = 0;
 
+	printf("Client:showFamilyTree command accepted\n");
+	if (read (server_socket_fd, &size, sizeof (int)) == 0)return 0;
+
+	printf("Number of structs %d\n",size );
+}
+void addChildren(int server_socket_fd)
+{
+	printf("addChildren command accepted\n");
+}
+void killFamilyMember(int server_socket_fd)
+{
+	printf("killFamilyMember command accepted\n");
+
+}
+void handleCommand(int server_socket_fd, int command)
+{
+	if( command == showFamilyTree_c )
+	{
+		showFamilyTree(server_socket_fd);
+		printf("showFamilyTree command handled\n");
+	}
+	else if( command == addChildren_c )
+	{
+		addChildren(server_socket_fd);
+		printf("addChildren command handled\n");
+	}
+	else if( command == killFamilyMember_c )
+	{
+		killFamilyMember(server_socket_fd);
+		printf("killFamilyMember command handled\n");
+	}
+}
 int main(int argc, char const *argv[])
 {
 	const char* const socket_name = argv[1];
@@ -34,10 +70,11 @@ int main(int argc, char const *argv[])
 	//Write the text on the command line to the socket.
 	while(1)
 	{
-		char message[10];
-		scanf("%s", message);
+		int command = 0;
+		scanf("%d", &command);
 	
-		write_text (socket_fd, message);
+		sendCommandRequest (socket_fd, command);
+		handleCommand(socket_fd, command);
 	}
 	
 	close (socket_fd);
