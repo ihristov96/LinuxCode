@@ -121,6 +121,60 @@ s_node* createNode(int birth_year, int birth_month, int birth_day, int birth_ord
 
     return(node);
 }
+
+s_node* createNodeFromStructure(s_node nodeTmp)
+{
+    char* c;
+    int idx = 0;
+    s_node* node = (s_node*)malloc(sizeof(s_node));
+    node->bt_left   = NULL;
+    node->bt_right  = NULL;
+
+    node->height = 1;  // new node is initially added at leaf
+    node->birth_year = nodeTmp.birth_year;
+    node->birth_month = nodeTmp.birth_month;
+    node->birth_day = nodeTmp.birth_day;
+    node->birth_order = nodeTmp.birth_order;
+
+    c = nodeTmp.name;
+    while('\0' != *c)
+    {
+        if (idx >= sizeof(node->name) - 1)
+        {
+            free(node);
+            return NULL;
+        }
+        node->name[idx] = *c;
+        idx++;
+        c++;
+    }
+    node->name[idx] = '\0';
+    idx = 0;
+
+    c = nodeTmp.surname;
+    while('\0' != *c)
+    {
+        if (idx >= sizeof(node->surname) - 1)
+        {
+            free(node);
+            return NULL;
+        }
+        node->surname[idx] = *c;
+        idx++;
+        c++;
+    }
+    node->surname[idx] = '\0';
+    idx = 0;
+
+
+   // node->name = *nodeTmp.name;
+    //node->surname = nodeTmp.surname;
+    node->isMale = nodeTmp.isMale;
+    node->isAlive = nodeTmp.isAlive;
+
+    node->ft_parent = nodeTmp.ft_parent;
+    node->ID = nodeTmp.ID;
+}
 /* TEST ONLY. actual createNode is above*/
 s_node* TESTcreateNode(int ID,char ch)
 {
@@ -132,8 +186,10 @@ s_node* TESTcreateNode(int ID,char ch)
     node->height = 1;  // new node is initially added at leaf
 
     node->ID = ID;
-    node->name[0] = ch;
-    node->name[1] = '\0';
+    node->name[0] = ch ;
+    node->name[1] = 'a' ;
+    node->name[2] =  'a';
+    node->name[3] = '\0';
     return(node);
 }
 
@@ -272,7 +328,7 @@ void print2DUtil(s_node *root, int space)
     int i = 0;
     for (i = COUNT; i < space; i++)
         printf(" ");
-    printf("%c\n", root->name[0]);
+    printf("%s#\n", root->name);
 
     // Process left child
     print2DUtil(root->bt_left, space);
